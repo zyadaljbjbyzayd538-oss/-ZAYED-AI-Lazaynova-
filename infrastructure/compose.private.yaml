@@ -1,0 +1,165 @@
+x-backend-build: &backend-build
+  context: ..
+  dockerfile: backend/Dockerfile
+
+x-backend-environment: &backend-environment
+  NODE_ENV: production
+  HOST: 0.0.0.0
+  PORT: 8080
+  DATABASE_URL: "postgresql://lazaynova:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the private env file}@postgres:5432/lazaynova"
+  REDIS_URL: "redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in the private env file}@redis:6379/0"
+  SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-24}
+  RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+  RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-1 minute}
+
+# Model and search credentials are intentionally withheld from migration/bootstrap containers.
+x-ai-environment: &ai-environment
+  AI_GATEWAY_PROVIDERS: ${AI_GATEWAY_PROVIDERS:-}
+  AI_GATEWAY_BASE_URL: ${AI_GATEWAY_BASE_URL:-}
+  AI_GATEWAY_MODEL: ${AI_GATEWAY_MODEL:-}
+  AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+  AI_GATEWAY_TIMEOUT_MS: ${AI_GATEWAY_TIMEOUT_MS:-30000}
+  AI_GATEWAY_LOCAL_BASE_URL: ${AI_GATEWAY_LOCAL_BASE_URL:-http://ollama:11434/v1}
+  AI_GATEWAY_LOCAL_MODEL: ${AI_GATEWAY_LOCAL_MODEL:-}
+  AI_GATEWAY_LOCAL_API_KEY: ${AI_GATEWAY_LOCAL_API_KEY:-}
+  AI_GATEWAY_LOCAL_ALLOW_INSECURE_HTTP: ${AI_GATEWAY_LOCAL_ALLOW_INSECURE_HTTP:-false}
+  AI_GATEWAY_LOCAL_TIMEOUT_MS: ${AI_GATEWAY_LOCAL_TIMEOUT_MS:-30000}
+  AI_GATEWAY_CLOUD_BASE_URL: ${AI_GATEWAY_CLOUD_BASE_URL:-}
+  AI_GATEWAY_CLOUD_MODEL: ${AI_GATEWAY_CLOUD_MODEL:-}
+  AI_GATEWAY_CLOUD_API_KEY: ${AI_GATEWAY_CLOUD_API_KEY:-}
+  AI_GATEWAY_CLOUD_TIMEOUT_MS: ${AI_GATEWAY_CLOUD_TIMEOUT_MS:-30000}
+  AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-}
+  AI_WRITING_PROVIDER: ${AI_WRITING_PROVIDER:-}
+  AI_MODEL_ANALYSIS_PROVIDER: ${AI_MODEL_ANALYSIS_PROVIDER:-}
+  AI_RESEARCH_PROVIDER: ${AI_RESEARCH_PROVIDER:-}
+  AI_FILE_ANALYSIS_PROVIDER: ${AI_FILE_ANALYSIS_PROVIDER:-}
+  AI_PLANNER_PROVIDER: ${AI_PLANNER_PROVIDER:-}
+  AI_MODEL_PRICING_JSON: ${AI_MODEL_PRICING_JSON:-}
+  TAVILY_ESTIMATED_COST_MICRO_USD_PER_CALL: ${TAVILY_ESTIMATED_COST_MICRO_USD_PER_CALL:-}
+  TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+  TAVILY_TIMEOUT_MS: ${TAVILY_TIMEOUT_MS:-20000}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lazaynova
+      POSTGRES_USER: lazaynova
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the private env file}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lazaynova -d lazaynova"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: &bounded-logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in the private env file}
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in the private env file}"]
+    volumes:
+      - redis_data:/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *bounded-logging
+
+  migrate:
+    image: lazaynova-backend:private
+    build: *backend-build
+    restart: "no"
+    command: ["node", "dist/src/scripts/migrate.js"]
+    environment: *backend-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [data]
+    logging: *bounded-logging
+
+  api:
+    image: lazaynova-backend:private
+    build: *backend-build
+    restart: unless-stopped
+    environment:
+      <<: [*backend-environment, *ai-environment]
+      FILE_ENCRYPTION_KEY: ${FILE_ENCRYPTION_KEY:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:8080:8080"
+    networks: [edge, data]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *bounded-logging
+
+  worker:
+    image: lazaynova-backend:private
+    build: *backend-build
+    restart: unless-stopped
+    command: ["node", "dist/src/workers/main.js"]
+    environment:
+      <<: [*backend-environment, *ai-environment]
+      FILE_ENCRYPTION_KEY: ${FILE_ENCRYPTION_KEY:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks: [edge, data]
+    logging: *bounded-logging
+
+  admin-bootstrap:
+    image: lazaynova-backend:private
+    build: *backend-build
+    profiles: [bootstrap]
+    restart: "no"
+    command: ["node", "dist/src/scripts/bootstrap-admin.js"]
+    environment:
+      <<: *backend-environment
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [data]
+    logging: *bounded-logging
+
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    profiles: [local-ai]
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks: [edge, data]
+    expose: ["11434"]
+    logging: *bounded-logging
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:
+
+networks:
+  edge:
+  data:
+    internal: true

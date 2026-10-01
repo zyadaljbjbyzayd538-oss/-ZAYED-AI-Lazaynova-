@@ -1,0 +1,17 @@
+.git
+**/node_modules
+**/dist
+.env
+**/.env
+infrastructure/private.env
+infrastructure/.env.private
+**/private.env
+**/.env.private
+**/*.log
+.gradle
+build
+captures
+.externalNativeBuild
+.cxx
+*.jks
+*.keystore
