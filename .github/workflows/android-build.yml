@@ -62,18 +62,19 @@ jobs:
       - name: Run Detekt
         run: ./android/gradlew -p android :app:detekt --stacktrace --console=plain 2>&1 | tee detekt.log
 
-      - name: Assemble mock debug APK
-        run: ./android/gradlew -p android :app:assembleMockDebug --stacktrace --console=plain 2>&1 | tee assemble-mock.log
+      - name: Assemble and package mock debug APK
+        run: ./android/gradlew -p android :app:assembleMockDebug :app:packageMockDebug --stacktrace --console=plain 2>&1 | tee assemble-mock.log
 
       - name: Run mock-flavor unit tests
         run: ./android/gradlew -p android testMockDebugUnitTest --stacktrace --console=plain 2>&1 | tee mock-unit-tests.log
 
       - name: Locate and stage generated mock APK
         run: |
-          find android/app/build/outputs -type f -print
-          apk_path="$(find android/app/build/outputs -type f -name '*.apk' | grep -E '/mock/|mock.*debug' | head -n 1 || true)"
+          apk_candidates="$(find android/app/build -type f -name '*.apk' -print || true)"
+          echo "::notice title=APK candidates::${apk_candidates:-none}"
+          apk_path="$(printf '%s\n' "$apk_candidates" | grep -E '/mock/|mock.*debug' | head -n 1 || true)"
           if [[ -z "$apk_path" ]]; then
-            echo "No APK output for the mock debug variant was found."
+            echo "No APK output for the mock debug variant was found under android/app/build."
             exit 1
           fi
           mkdir -p artifacts/android
