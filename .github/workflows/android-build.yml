@@ -62,22 +62,24 @@ jobs:
       - name: Run Detekt
         run: ./android/gradlew -p android :app:detekt --stacktrace --console=plain 2>&1 | tee detekt.log
 
-      - name: Upload Android analysis logs on failure
+      - name: Assemble mock debug APK
+        run: ./android/gradlew -p android :app:assembleMockDebug --stacktrace --console=plain 2>&1 | tee assemble-mock.log
+
+      - name: Run mock-flavor unit tests
+        run: ./android/gradlew -p android testMockDebugUnitTest --stacktrace --console=plain 2>&1 | tee mock-unit-tests.log
+
+      - name: Upload Android diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: android-analysis-logs-${{ github.run_id }}
+          name: android-diagnostics-${{ github.run_id }}
           path: |
             ktlint-check.log
             detekt.log
+            assemble-mock.log
+            mock-unit-tests.log
           if-no-files-found: ignore
           retention-days: 3
-
-      - name: Assemble mock debug APK
-        run: ./android/gradlew -p android :app:assembleMockDebug
-
-      - name: Run mock-flavor unit tests
-        run: ./android/gradlew -p android testMockDebugUnitTest
 
       - name: Publish mock APK
         uses: actions/upload-artifact@v6
