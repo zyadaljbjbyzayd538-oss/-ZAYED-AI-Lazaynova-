@@ -152,8 +152,11 @@ fun LoginScreen(state: LazaynovaViewModel.ChatUiState, viewModel: LazaynovaViewM
             Text("ZAYED AI · خاص وآمن", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(10.dp))
             Text(
-                if (BuildConfig.USE_MOCK_DATA) "وضع محاكاة محلي: لا اتصال بخادم ولا إرسال لبيانات الدخول أو الرسائل."
-                else "سجّل الدخول إلى خادم Lazaynova الخاص بك. يختار الخادم مزود ونموذج المحادثة؛ لا يحتوي التطبيق على مفاتيح مزودين.",
+                if (BuildConfig.USE_MOCK_DATA) {
+                    "وضع محاكاة محلي: لا اتصال بخادم ولا إرسال لبيانات الدخول أو الرسائل."
+                } else {
+                    "سجّل الدخول إلى خادم Lazaynova الخاص بك. يختار الخادم مزود ونموذج المحادثة؛ لا يحتوي التطبيق على مفاتيح مزودين."
+                },
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -199,16 +202,23 @@ fun LoginScreen(state: LazaynovaViewModel.ChatUiState, viewModel: LazaynovaViewM
             Button(
                 onClick = viewModel::login,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isLoading && state.email.isNotBlank() &&
+                enabled = !state.isLoading &&
+                    state.email.isNotBlank() &&
                     (BuildConfig.USE_MOCK_DATA || (state.baseUrl.isNotBlank() && state.password.isNotBlank())),
             ) {
-                if (state.isLoading) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                else Text(if (BuildConfig.USE_MOCK_DATA) "دخول إلى المعاينة المحلية" else "تسجيل الدخول")
+                if (state.isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(if (BuildConfig.USE_MOCK_DATA) "دخول إلى المعاينة المحلية" else "تسجيل الدخول")
+                }
             }
             Spacer(Modifier.height(20.dp))
             Text(
-                if (BuildConfig.USE_MOCK_DATA) "بيانات هذه النسخة تجريبية ومصطنعة، ولن تظهر كحالة حساب حقيقي."
-                else "لا تُحفظ كلمة المرور. يُشفّر رمز الجلسة محليًا بمفتاح Android Keystore، ويُرسل عبر HTTPS فقط.",
+                if (BuildConfig.USE_MOCK_DATA) {
+                    "بيانات هذه النسخة تجريبية ومصطنعة، ولن تظهر كحالة حساب حقيقي."
+                } else {
+                    "لا تُحفظ كلمة المرور. يُشفّر رمز الجلسة محليًا بمفتاح Android Keystore، ويُرسل عبر HTTPS فقط."
+                },
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -241,94 +251,94 @@ fun ChatScreen(
         val wide = maxWidth > 1200.dp
         val medium = maxWidth >= 600.dp
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            gesturesEnabled = !wide,
-            drawerContent = {
-                if (!wide) {
-                    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                        NavigationPane(
-                            selected = section,
-                            query = navigationQuery,
-                            onQueryChange = { navigationQuery = it },
-                            onSelect = { selected ->
-                                if (selected == WorkspaceSection.CHAT) actions.newChat()
-                                sectionName = selected.name
-                                scope.launch { drawerState.close() }
-                            },
-                        )
+            ModalNavigationDrawer(
+                drawerState = drawerState,
+                gesturesEnabled = !wide,
+                drawerContent = {
+                    if (!wide) {
+                        ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                NavigationPane(
+                                    selected = section,
+                                    query = navigationQuery,
+                                    onQueryChange = { navigationQuery = it },
+                                    onSelect = { selected ->
+                                        if (selected == WorkspaceSection.CHAT) actions.newChat()
+                                        sectionName = selected.name
+                                        scope.launch { drawerState.close() }
+                                    },
+                                )
+                            }
                         }
                     }
-                }
-            },
-        ) {
-            Row(modifier = Modifier.fillMaxSize().background(workspaceBrush())) {
-                if (wide) {
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    NavigationPane(
-                        selected = section,
-                        query = navigationQuery,
-                        onQueryChange = { navigationQuery = it },
-                        onSelect = { selected ->
-                            if (selected == WorkspaceSection.CHAT) actions.newChat()
-                            sectionName = selected.name
-                        },
-                        modifier = Modifier.width(264.dp).fillMaxHeight(),
-                    )
-                    }
-                } else if (medium) {
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    NavigationRail(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)) {
-                        WorkspaceSection.entries.take(5).forEach { item ->
-                            NavigationRailItem(
-                                selected = section == item,
-                                onClick = {
-                                    if (item == WorkspaceSection.CHAT) actions.newChat()
-                                    sectionName = item.name
+                },
+            ) {
+                Row(modifier = Modifier.fillMaxSize().background(workspaceBrush())) {
+                    if (wide) {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                            NavigationPane(
+                                selected = section,
+                                query = navigationQuery,
+                                onQueryChange = { navigationQuery = it },
+                                onSelect = { selected ->
+                                    if (selected == WorkspaceSection.CHAT) actions.newChat()
+                                    sectionName = selected.name
                                 },
-                                icon = { Text(item.symbol, fontSize = 18.sp) },
-                                label = { Text(item.title.take(8), fontSize = 10.sp) },
-                                alwaysShowLabel = false,
+                                modifier = Modifier.width(264.dp).fillMaxHeight(),
+                            )
+                        }
+                    } else if (medium) {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                            NavigationRail(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)) {
+                                WorkspaceSection.entries.take(5).forEach { item ->
+                                    NavigationRailItem(
+                                        selected = section == item,
+                                        onClick = {
+                                            if (item == WorkspaceSection.CHAT) actions.newChat()
+                                            sectionName = item.name
+                                        },
+                                        icon = { Text(item.symbol, fontSize = 18.sp) },
+                                        label = { Text(item.title.take(8), fontSize = 10.sp) },
+                                        alwaysShowLabel = false,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        CenterWorkspace(
+                            state = state,
+                            actions = actions,
+                            section = section,
+                            themeMode = themeMode,
+                            compact = !wide,
+                            onOpenDrawer = { scope.launch { drawerState.open() } },
+                            onOpenTaskSheet = { sheet = WorkspaceSheet.TASKS },
+                            onOpenQuickPanel = { sheet = WorkspaceSheet.QUICK_PANEL },
+                            onThemeModeChange = onThemeModeChange,
+                            onRefreshCapabilities = actions::refreshCapabilities,
+                            mockMode = mockMode,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                    }
+
+                    if (wide) {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                            QuickActionPanel(
+                                state = state,
+                                themeMode = themeMode,
+                                onThemeModeChange = onThemeModeChange,
+                                onRefreshUsage = actions::refreshUsage,
+                                onSignOut = actions::signOut,
+                                onRefreshCapabilities = actions::refreshCapabilities,
+                                mockMode = mockMode,
+                                modifier = Modifier.width(304.dp).fillMaxHeight(),
                             )
                         }
                     }
-                    }
-                }
-
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                CenterWorkspace(
-                    state = state,
-                    actions = actions,
-                    section = section,
-                    themeMode = themeMode,
-                    compact = !wide,
-                    onOpenDrawer = { scope.launch { drawerState.open() } },
-                    onOpenTaskSheet = { sheet = WorkspaceSheet.TASKS },
-                    onOpenQuickPanel = { sheet = WorkspaceSheet.QUICK_PANEL },
-                    onThemeModeChange = onThemeModeChange,
-                    onRefreshCapabilities = actions::refreshCapabilities,
-                    mockMode = mockMode,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                )
-                }
-
-                if (wide) {
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    QuickActionPanel(
-                        state = state,
-                        themeMode = themeMode,
-                        onThemeModeChange = onThemeModeChange,
-                        onRefreshUsage = actions::refreshUsage,
-                        onSignOut = actions::signOut,
-                        onRefreshCapabilities = actions::refreshCapabilities,
-                        mockMode = mockMode,
-                        modifier = Modifier.width(304.dp).fillMaxHeight(),
-                    )
-                    }
                 }
             }
-        }
         }
 
         val visibleSheet = sheet
@@ -342,7 +352,10 @@ fun ChatScreen(
                     WorkspaceSheet.TASKS -> TaskSelectionSheet(
                         state = state,
                         mockMode = mockMode,
-                        onSelectChat = { actions.newChat(); sheet = null },
+                        onSelectChat = {
+                            actions.newChat()
+                            sheet = null
+                        },
                         onStartMockDag = actions::startMockDagPreview,
                         onApproveMockDag = actions::approveMockDagPreview,
                     )
@@ -679,8 +692,11 @@ private fun UsageCard(state: LazaynovaViewModel.ChatUiState, onRefresh: () -> Un
         }
         HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
         Text(
-            if (mockMode) "أرقام رموز وتكلفة مصطنعة للمعاينة فقط."
-            else "هذا ملخص الرموز والتكلفة، وليس عدادًا لحصص الأدوات أو رصيدًا ماليًا.",
+            if (mockMode) {
+                "أرقام رموز وتكلفة مصطنعة للمعاينة فقط."
+            } else {
+                "هذا ملخص الرموز والتكلفة، وليس عدادًا لحصص الأدوات أو رصيدًا ماليًا."
+            },
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -738,8 +754,11 @@ private fun ToolQuotaCard(
             }
         }
         Text(
-            if (mockMode) "الأرقام تجريبية محلية وليست حالة حساب."
-            else "المتبقي = الحد − العداد الحالي. تقدير لقطة الخادم؛ قد يتغير عند استخدام جلسة أخرى. إعادة التصفير اليومية عند 00:00 UTC. منفصل عن رموز وتكلفة /v1/usage.",
+            if (mockMode) {
+                "الأرقام تجريبية محلية وليست حالة حساب."
+            } else {
+                "المتبقي = الحد − العداد الحالي. تقدير لقطة الخادم؛ قد يتغير عند استخدام جلسة أخرى. إعادة التصفير اليومية عند 00:00 UTC. منفصل عن رموز وتكلفة /v1/usage."
+            },
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -755,7 +774,7 @@ private fun ToolQuotaRow(capability: String, tool: ToolGrantSnapshot, now: Insta
             Text(tool.name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             Text(if (tool.granted) "منحة مفعّلة" else "منحة غير مفعّلة", style = MaterialTheme.typography.labelSmall, color = if (tool.granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text("${capability} · السجل لا يُعامل كتكلفة", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("$capability · السجل لا يُعامل كتكلفة", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (usage == null) {
             Text("عداد الحصة غير متاح من API؛ لن نعرض رقمًا متبقيًا مختلقًا.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
@@ -771,8 +790,7 @@ private fun ToolQuotaRow(capability: String, tool: ToolGrantSnapshot, now: Insta
     }
 }
 
-private fun utcDateTime(instant: Instant): String =
-    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'").withZone(ZoneOffset.UTC).format(instant)
+private fun utcDateTime(instant: Instant): String = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'").withZone(ZoneOffset.UTC).format(instant)
 
 @Composable
 private fun UsageDashboard(state: LazaynovaViewModel.ChatUiState, actions: LazaynovaScreenActions, onRefreshCapabilities: () -> Unit, mockMode: Boolean) {
@@ -886,7 +904,9 @@ private val chatFeature = TaskFeature(
 private val taskPickerOptions = listOf(
     TaskPickerOption("✎", "محادثة نصية", "تُرسل إلى خادم الحساب بعد التحقق من منحة CHAT.", chatFeature, startsChat = true),
     TaskPickerOption(
-        "▧", "ملف أو مستند", "رفع الملفات من الهاتف غير موصول.",
+        "▧",
+        "ملف أو مستند",
+        "رفع الملفات من الهاتف غير موصول.",
         TaskFeature("file", "ملف أو مستند", "FILE_ANALYSIS", "file.read_text", supportedByClient = false, permissionName = "صلاحية تحليل الملفات"),
         previewableInMock = true,
     ),
@@ -896,12 +916,16 @@ private val taskPickerOptions = listOf(
     TaskPickerOption("♫", "توليد موسيقى", "لا يوجد محرك موسيقى موصول.", TaskFeature("music", "توليد موسيقى", null, supportedByClient = false)),
     TaskPickerOption("▣", "Canvas ومحرر منقسم", "لا يوجد محرر مباشر موصول.", TaskFeature("canvas", "Canvas ومحرر منقسم", null, supportedByClient = false)),
     TaskPickerOption(
-        "⌕", "Deep Research", "الخادم يملك مسار بحث؛ تطبيق الهاتف لا يرسل مهام البحث بعد.",
+        "⌕",
+        "Deep Research",
+        "الخادم يملك مسار بحث؛ تطبيق الهاتف لا يرسل مهام البحث بعد.",
         TaskFeature("research", "Deep Research", "WEB_RESEARCH", "web.search", supportedByClient = false),
         previewableInMock = true,
     ),
     TaskPickerOption(
-        "◇", "تحليل النماذج", "الخادم يعلن أن هذه القدرة غير جاهزة في عينة المحاكاة.",
+        "◇",
+        "تحليل النماذج",
+        "الخادم يعلن أن هذه القدرة غير جاهزة في عينة المحاكاة.",
         TaskFeature("model-analysis", "تحليل النماذج", "MODEL_ANALYSIS", supportedByClient = false),
         previewableInMock = true,
     ),
@@ -924,8 +948,11 @@ private fun TaskSelectionSheet(
     ) {
         Text("اختيار المهمة", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(
-            if (mockMode) "بيانات محاكاة واضحة؛ البطاقات تختبر الحالات ولا تنفذ مهامًا غير المحادثة التجريبية."
-            else "الحالة من صلاحيات الخادم المصادق عليه. لا تُطلب أذونات الجهاز هنا؛ ستظهر موافقة نظامية فقط عند إضافة إجراء فعلي.",
+            if (mockMode) {
+                "بيانات محاكاة واضحة؛ البطاقات تختبر الحالات ولا تنفذ مهامًا غير المحادثة التجريبية."
+            } else {
+                "الحالة من صلاحيات الخادم المصادق عليه. لا تُطلب أذونات الجهاز هنا؛ ستظهر موافقة نظامية فقط عند إضافة إجراء فعلي."
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1245,7 +1272,6 @@ private fun costLabel(microusd: String): String = try {
 } catch (_: NumberFormatException) {
     "—"
 }
-
 
 private val previewActions = object : LazaynovaScreenActions {
     override fun newChat() = Unit
