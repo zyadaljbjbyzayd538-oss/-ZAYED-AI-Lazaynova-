@@ -29,7 +29,8 @@ class MockLazaynovaRepository(
     private val now: () -> Instant = Instant::now,
     private val tokenDelayMillis: Long = 35,
     private val previewStepDelayMillis: Long = 350,
-) : LazaynovaRepository, MockPreviewRepository {
+) : LazaynovaRepository,
+    MockPreviewRepository {
     override suspend fun createSession(baseUrl: String, email: String, password: String): LazaynovaApi.Session {
         require(email.isNotBlank()) { "أدخل بريدًا تجريبيًا." }
         return LazaynovaApi.Session("https://mock.lazaynova.invalid", "mock-session-not-a-credential", email.trim())
@@ -67,11 +68,15 @@ class MockLazaynovaRepository(
                 CapabilityGrantSnapshot("CHAT", granted = true, ready = true, toolGrants = emptyList()),
                 CapabilityGrantSnapshot("WRITING", granted = true, ready = true, toolGrants = emptyList()),
                 CapabilityGrantSnapshot(
-                    "WEB_RESEARCH", granted = true, ready = true,
+                    "WEB_RESEARCH",
+                    granted = true,
+                    ready = true,
                     toolGrants = listOf(ToolGrantSnapshot("web.search", granted = true, usage = quota(20, 4, 200, 200))),
                 ),
                 CapabilityGrantSnapshot(
-                    "FILE_ANALYSIS", granted = false, ready = true,
+                    "FILE_ANALYSIS",
+                    granted = false,
+                    ready = true,
                     toolGrants = listOf(ToolGrantSnapshot("file.read_text", granted = false, usage = quota(30, 2, 500, 86))),
                 ),
                 CapabilityGrantSnapshot("CODING", granted = false, ready = false, toolGrants = emptyList()),
@@ -99,9 +104,11 @@ class MockLazaynovaRepository(
         streamText(messages).collect { chunk ->
             emit(LazaynovaApi.ChatStreamEvent.TextDelta(chunk))
         }
-        emit(LazaynovaApi.ChatStreamEvent.Completed(
-            LazaynovaApi.ChatProvenance("mock", "local-preview", "mock-request", null, null),
-        ))
+        emit(
+            LazaynovaApi.ChatStreamEvent.Completed(
+                LazaynovaApi.ChatProvenance("mock", "local-preview", "mock-request", null, null),
+            ),
+        )
     }
 
     override fun streamDagPreview(): Flow<MockDagSnapshot> = flow {

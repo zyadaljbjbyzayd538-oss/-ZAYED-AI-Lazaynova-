@@ -144,8 +144,11 @@ class LazaynovaApi {
                             val expectedMinuteReset = snapshot.serverTime.truncatedTo(ChronoUnit.MINUTES).plus(1, ChronoUnit.MINUTES)
                             val expectedUtcDayReset = snapshot.serverTime.atZone(ZoneOffset.UTC)
                                 .toLocalDate().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()
-                            if (snapshot.callsPerMinute <= 0 || snapshot.callsPerDay <= 0 ||
-                                snapshot.minuteResetAt != expectedMinuteReset || snapshot.utcDayResetAt != expectedUtcDayReset) {
+                            if (snapshot.callsPerMinute <= 0 ||
+                                snapshot.callsPerDay <= 0 ||
+                                snapshot.minuteResetAt != expectedMinuteReset ||
+                                snapshot.utcDayResetAt != expectedUtcDayReset
+                            ) {
                                 throw ApiException("حدود حصة الأداة غير متسقة.")
                             }
                             snapshot
@@ -224,13 +227,17 @@ class LazaynovaApi {
         awaitClose { call.cancel() }
     }
 
-    private fun endpoint(origin: HttpUrl, path: String): HttpUrl =
-        origin.newBuilder().addPathSegments(path).build()
+    private fun endpoint(origin: HttpUrl, path: String): HttpUrl = origin.newBuilder().addPathSegments(path).build()
 
     private fun validatedOrigin(value: String): HttpUrl {
         val url = value.trim().toHttpUrlOrNull() ?: throw ApiException("أدخل عنوان خادم صالحًا.")
-        if (!url.isHttps || url.encodedPath != "/" || url.encodedQuery != null || url.encodedFragment != null ||
-            url.username.isNotEmpty() || url.password.isNotEmpty()) {
+        if (!url.isHttps ||
+            url.encodedPath != "/" ||
+            url.encodedQuery != null ||
+            url.encodedFragment != null ||
+            url.username.isNotEmpty() ||
+            url.password.isNotEmpty()
+        ) {
             throw ApiException("يجب أن يكون عنوان الخادم HTTPS فقط، دون مسار أو بيانات اعتماد.")
         }
         return url

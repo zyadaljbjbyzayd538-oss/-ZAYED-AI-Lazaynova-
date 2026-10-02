@@ -27,7 +27,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class LazaynovaViewModel(application: Application) : AndroidViewModel(application), LazaynovaScreenActions {
+class LazaynovaViewModel(application: Application) :
+    AndroidViewModel(application),
+    LazaynovaScreenActions {
     private val repository: LazaynovaRepository = if (BuildConfig.USE_MOCK_DATA) {
         MockLazaynovaRepository()
     } else {
@@ -245,8 +247,11 @@ class LazaynovaViewModel(application: Application) : AndroidViewModel(applicatio
                     val messages = state.messages.toMutableList()
                     val last = messages.lastOrNull()
                     if (last?.role == "assistant" && last.isStreaming) {
-                        if (last.content.isBlank()) messages.removeAt(messages.lastIndex)
-                        else messages[messages.lastIndex] = last.copy(isStreaming = false, isIncomplete = true)
+                        if (last.content.isBlank()) {
+                            messages.removeAt(messages.lastIndex)
+                        } else {
+                            messages[messages.lastIndex] = last.copy(isStreaming = false, isIncomplete = true)
+                        }
                     }
                     val lastUserIndex = messages.indexOfLast { it.role == "user" }
                     if (lastUserIndex >= 0) messages[lastUserIndex] = messages[lastUserIndex].copy(excludeFromHistory = true)
@@ -267,8 +272,11 @@ class LazaynovaViewModel(application: Application) : AndroidViewModel(applicatio
             val messages = state.messages.toMutableList()
             val last = messages.lastOrNull()
             if (last?.role == "assistant" && last.isStreaming) {
-                if (last.content.isBlank()) messages.removeAt(messages.lastIndex)
-                else messages[messages.lastIndex] = last.copy(isStreaming = false, isIncomplete = true)
+                if (last.content.isBlank()) {
+                    messages.removeAt(messages.lastIndex)
+                } else {
+                    messages[messages.lastIndex] = last.copy(isStreaming = false, isIncomplete = true)
+                }
             }
             val lastUserIndex = messages.indexOfLast { it.role == "user" }
             if (lastUserIndex >= 0) messages[lastUserIndex] = messages[lastUserIndex].copy(excludeFromHistory = true)
