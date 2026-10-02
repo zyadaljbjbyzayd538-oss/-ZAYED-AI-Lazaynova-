@@ -1,0 +1,170 @@
+name: Android build
+
+on:
+  pull_request:
+    paths:
+      - "android/**"
+      - "config/detekt/**"
+      - ".editorconfig"
+      - "scripts/build-android.sh"
+      - ".github/workflows/android-build.yml"
+  push:
+    branches: [main, "arena/**"]
+    paths:
+      - "android/**"
+      - "config/detekt/**"
+      - ".editorconfig"
+      - "scripts/build-android.sh"
+      - ".github/workflows/android-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Java
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4.0.4
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.4.0
+        with:
+          gradle-version: "9.4.1"
+
+      - name: Generate project Gradle wrapper for this CI run
+        run: gradle -p android wrapper --gradle-version 9.4.1 --distribution-type bin
+
+      - name: Check Kotlin style
+        id: ktlint
+        shell: bash
+        run: ./android/gradlew -p android :app:ktlintCheck --stacktrace --console=plain 2>&1 | tee ktlint-check.log
+
+      - name: Run Detekt
+        shell: bash
+        run: ./android/gradlew -p android :app:detekt --stacktrace --console=plain 2>&1 | tee detekt.log
+
+      - name: Assemble and package mock debug APK
+        shell: bash
+        run: ./android/gradlew -p android :app:assembleMockDebug :app:packageMockDebug --stacktrace --console=plain 2>&1 | tee assemble-mock.log
+
+      - name: Run mock-flavor unit tests
+        id: mock_tests
+        shell: bash
+        run: ./android/gradlew -p android testMockDebugUnitTest --stacktrace --console=plain 2>&1 | tee mock-unit-tests.log
+
+      - name: Report mock unit test failures
+        if: failure() && steps.mock_tests.outcome == 'failure'
+        shell: bash
+        run: |
+          python3 - <<'PYTHON' > mock-tests-summary.txt
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          reports = list(Path("android/app/build/test-results/testMockDebugUnitTest").glob("TEST-*.xml"))
+          failures = []
+          for report in reports:
+              root = ET.parse(report).getroot()
+              for case in root.iter("testcase"):
+                  result = case.find("failure")
+                  if result is None:
+                      result = case.find("error")
+                  if result is not None:
+                      detail = " ".join((result.get("message", "") + " " + (result.text or "")).split())
+                      failures.append(f"{case.get('classname', '')}.{case.get('name', '')}: {detail[:1200]}")
+
+          if failures:
+              print("\n".join(failures))
+          else:
+              print("JUnit XML did not contain failure details.")
+          PYTHON
+          failure_summary="$(tr '\n' ';' < mock-tests-summary.txt | cut -c1-3500)"
+          echo "::error title=Mock debug unit test failures::${failure_summary}"
+
+      - name: Report Gradle task diagnostics on failure
+        if: failure()
+        shell: bash
+        run: |
+          task_summary="$(grep -E 'Task .*FAILED|BUILD FAILED' ktlint-check.log detekt.log assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 10 | tr '\n' ';' || true)"
+          error_summary="$(grep -iE '(\.kt:[0-9]+:[0-9]+|^e: |error:|rule.*violated|issues found|what went wrong|execution failed|could not resolve|requires|minimum|aar metadata|compilesdk|caused by)' ktlint-check.log detekt.log assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 80 | tr '\n' ';' | cut -c1-12000 || true)"
+          echo "::error title=Gradle task diagnostics::Tasks: ${task_summary:-no task log}; details: ${error_summary:-no matching error details}"
+
+      - name: Capture KtLint formatting patch for review
+        if: failure() && steps.ktlint.outcome == 'failure'
+        shell: bash
+        run: |
+          ./android/gradlew -p android :app:ktlintFormat --stacktrace --console=plain
+          git diff -- android/app > ktlint-format.patch
+          gzip -c ktlint-format.patch > ktlint-format.patch.gz
+          base64 -w0 ktlint-format.patch.gz > ktlint-format.patch.gz.b64
+          split --bytes=2800 --numeric-suffixes=0 --suffix-length=3 \
+            ktlint-format.patch.gz.b64 ktlint-format-chunk-
+          shopt -s nullglob
+          chunks=(ktlint-format-chunk-*)
+          if ((${#chunks[@]} == 0)); then
+            echo "::warning title=ktlint-patch::No formatting patch was generated."
+          else
+            for chunk_file in "${chunks[@]}"; do
+              chunk_index="${chunk_file##*-}"
+              chunk="$(cat "$chunk_file")"
+              echo "::notice title=ktlint-patch-chunk-${chunk_index}::$chunk"
+            done
+          fi
+
+      - name: Locate and stage generated mock APK
+        run: |
+          apk_candidates="$(find android/app/build -type f -name '*.apk' -print || true)"
+          echo "::notice title=APK candidates::${apk_candidates:-none}"
+          apk_path="$(printf '%s\n' "$apk_candidates" | grep -E '/mock/|mock.*debug' | head -n 1 || true)"
+          if [[ -z "$apk_path" ]]; then
+            task_summary="$(grep -E 'Task :app/|Task :app:|BUILD SUCCESSFUL|BUILD FAILED|APK' assemble-mock.log | tail -n 30 | tr '\n' ';' || true)"
+            build_dirs="$(find android/app/build -maxdepth 5 -type d -print 2>/dev/null | paste -sd ',' - | cut -c1-3000)"
+            echo "::error title=No mock APK output::No APK candidates. Gradle summary: ${task_summary:-none}; build directories: ${build_dirs:-none}"
+            exit 1
+          fi
+          mkdir -p artifacts/android
+          cp "$apk_path" artifacts/android/Lazaynova-mock-debug.apk
+
+      - name: Publish mock APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: lazaynova-android-mock-debug
+          path: artifacts/android/Lazaynova-mock-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Android diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-diagnostics-${{ github.run_id }}
+          path: |
+            ktlint-check.log
+            detekt.log
+            assemble-mock.log
+            mock-unit-tests.log
+            mock-tests-summary.txt
+            ktlint-format.patch.gz
+          if-no-files-found: ignore
+          retention-days: 3
