@@ -31,17 +31,17 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4.0.4
 
       - name: Install Android SDK packages
         run: |
@@ -49,7 +49,7 @@ jobs:
           sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.4.0
         with:
           gradle-version: "9.4.1"
 
@@ -66,7 +66,7 @@ jobs:
         run: ./android/gradlew -p android testMockDebugUnitTest
 
       - name: Publish mock APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: lazaynova-android-mock-debug
           path: android/app/build/outputs/apk/mock/debug/*.apk
