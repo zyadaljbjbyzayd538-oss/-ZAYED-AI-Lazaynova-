@@ -1,0 +1,74 @@
+name: Android build
+
+on:
+  pull_request:
+    paths:
+      - "android/**"
+      - "config/detekt/**"
+      - ".editorconfig"
+      - "scripts/build-android.sh"
+      - ".github/workflows/android-build.yml"
+  push:
+    branches: [main, "arena/**"]
+    paths:
+      - "android/**"
+      - "config/detekt/**"
+      - ".editorconfig"
+      - "scripts/build-android.sh"
+      - ".github/workflows/android-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.4.1"
+
+      - name: Generate project Gradle wrapper for this CI run
+        run: gradle -p android wrapper --gradle-version 9.4.1 --distribution-type bin
+
+      - name: Check Kotlin style and static analysis
+        run: ./android/gradlew -p android :app:ktlintCheck :app:detekt
+
+      - name: Assemble mock debug APK
+        run: ./android/gradlew -p android :app:assembleMockDebug
+
+      - name: Run mock-flavor unit tests
+        run: ./android/gradlew -p android testMockDebugUnitTest
+
+      - name: Publish mock APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: lazaynova-android-mock-debug
+          path: android/app/build/outputs/apk/mock/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7

@@ -1,3 +1,12 @@
+# Node.js backend
+node_modules/
+backend/dist/
+backend/.diagnostics/
+.env
+backend/.env
+infrastructure/private.env
+infrastructure/.env.private
+
 # Gradle files
 .gradle/
 build/
@@ -32,3 +41,6 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Local Android APK output
+/artifacts/android/
