@@ -57,6 +57,7 @@ jobs:
         run: gradle -p android wrapper --gradle-version 9.4.1 --distribution-type bin
 
       - name: Check Kotlin style
+        id: ktlint
         shell: bash
         run: ./android/gradlew -p android :app:ktlintCheck --stacktrace --console=plain 2>&1 | tee ktlint-check.log
 
@@ -81,11 +82,11 @@ jobs:
           echo "::error title=Gradle task diagnostics::Tasks: ${task_summary:-no task log}; details: ${error_summary:-no matching error details}"
 
       - name: Capture KtLint formatting patch for review
-        if: failure()
+        if: failure() && steps.ktlint.outcome == 'failure'
         shell: bash
         run: |
           ./android/gradlew -p android :app:ktlintFormat --stacktrace --console=plain
-          git diff -- android/app/src/main/java/com/zayedai/lazaynova/ui/MainScreens.kt > ktlint-format.patch
+          git diff -- android/app > ktlint-format.patch
           gzip -c ktlint-format.patch > ktlint-format.patch.gz
           base64 -w0 ktlint-format.patch.gz > ktlint-format.patch.gz.b64
           split --bytes=2800 --numeric-suffixes=0 --suffix-length=3 \
