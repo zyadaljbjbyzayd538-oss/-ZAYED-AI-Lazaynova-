@@ -68,6 +68,25 @@ jobs:
       - name: Run mock-flavor unit tests
         run: ./android/gradlew -p android testMockDebugUnitTest --stacktrace --console=plain 2>&1 | tee mock-unit-tests.log
 
+      - name: Locate and stage generated mock APK
+        run: |
+          find android/app/build/outputs -type f -print
+          apk_path="$(find android/app/build/outputs -type f -name '*.apk' | grep -E '/mock/|mock.*debug' | head -n 1 || true)"
+          if [[ -z "$apk_path" ]]; then
+            echo "No APK output for the mock debug variant was found."
+            exit 1
+          fi
+          mkdir -p artifacts/android
+          cp "$apk_path" artifacts/android/Lazaynova-mock-debug.apk
+
+      - name: Publish mock APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: lazaynova-android-mock-debug
+          path: artifacts/android/Lazaynova-mock-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload Android diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v6
@@ -80,11 +99,3 @@ jobs:
             mock-unit-tests.log
           if-no-files-found: ignore
           retention-days: 3
-
-      - name: Publish mock APK
-        uses: actions/upload-artifact@v6
-        with:
-          name: lazaynova-android-mock-debug
-          path: android/app/build/outputs/apk/mock/debug/*.apk
-          if-no-files-found: error
-          retention-days: 7
