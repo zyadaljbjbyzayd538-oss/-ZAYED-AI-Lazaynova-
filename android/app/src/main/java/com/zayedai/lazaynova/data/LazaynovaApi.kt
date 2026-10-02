@@ -24,6 +24,16 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
+private fun decodeUtf8(bytes: ByteArray): String = try {
+    StandardCharsets.UTF_8.newDecoder()
+        .onMalformedInput(CodingErrorAction.REPORT)
+        .onUnmappableCharacter(CodingErrorAction.REPORT)
+        .decode(ByteBuffer.wrap(bytes))
+        .toString()
+} catch (_: Exception) {
+    throw LazaynovaApi.ApiException("استجابة الخادم ليست UTF-8 صالحًا.")
+}
+
 /** Authenticated HTTP boundary; the app never chooses provider or model IDs. */
 class LazaynovaApi {
     private val client = OkHttpClient.Builder()
@@ -253,16 +263,6 @@ class LazaynovaApi {
             output.write(buffer, 0, count)
         }
         return output.toByteArray()
-    }
-
-    private fun decodeUtf8(bytes: ByteArray): String = try {
-        StandardCharsets.UTF_8.newDecoder()
-            .onMalformedInput(CodingErrorAction.REPORT)
-            .onUnmappableCharacter(CodingErrorAction.REPORT)
-            .decode(ByteBuffer.wrap(bytes))
-            .toString()
-    } catch (_: Exception) {
-        throw ApiException("استجابة الخادم ليست UTF-8 صالحًا.")
     }
 
     data class Session(val baseUrl: String, val bearerToken: String, val email: String)

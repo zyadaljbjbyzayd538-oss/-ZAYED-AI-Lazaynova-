@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.zayedai.lazaynova"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.zayedai.lazaynova"

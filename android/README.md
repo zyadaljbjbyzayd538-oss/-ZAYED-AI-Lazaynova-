@@ -5,7 +5,7 @@ Native Kotlin/Jetpack Compose client for the authenticated Lazaynova API, with e
 ## Build prerequisites
 
 - Android Studio with JDK 17
-- Android SDK Platform 36 and Build Tools 36.0.0
+- Android SDK Platform 37 and Build Tools 36.0.0
 - Android Gradle Plugin 9.2.0 / Gradle 9.4.1
 
 From the repository root, run `scripts/build-android.sh` to execute ktlint, detekt, `testMockDebugUnitTest`, and `assembleMockDebug`, then copy the mock APK to `artifacts/android/Lazaynova-mock-debug.apk`. The script uses `android/gradlew` when present, otherwise a system `gradle`; it fails clearly if neither is installed. The CI workflow generates a Gradle 9.4.1 wrapper for that run because this checkout does not include wrapper files, then runs style/static analysis, `assembleDebug`, and `testMockDebugUnitTest`.

@@ -5,7 +5,7 @@
 ## المتطلبات
 
 - JDK 17.
-- Android SDK Platform 36 وBuild Tools 36.0.0.
+- Android SDK Platform 37 وBuild Tools 36.0.0.
 - Gradle 9.4.1 أو ملف wrapper صالح في `android/gradlew`.
 - اتصال Gradle بالمستودعات الرسمية لتنزيل التبعيات؛ لا حاجة لمفتاح AI.
 
