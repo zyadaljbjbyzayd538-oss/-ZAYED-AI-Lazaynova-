@@ -57,16 +57,28 @@ jobs:
         run: gradle -p android wrapper --gradle-version 9.4.1 --distribution-type bin
 
       - name: Check Kotlin style
+        shell: bash
         run: ./android/gradlew -p android :app:ktlintCheck --stacktrace --console=plain 2>&1 | tee ktlint-check.log
 
       - name: Run Detekt
+        shell: bash
         run: ./android/gradlew -p android :app:detekt --stacktrace --console=plain 2>&1 | tee detekt.log
 
       - name: Assemble and package mock debug APK
+        shell: bash
         run: ./android/gradlew -p android :app:assembleMockDebug :app:packageMockDebug --stacktrace --console=plain 2>&1 | tee assemble-mock.log
 
       - name: Run mock-flavor unit tests
+        shell: bash
         run: ./android/gradlew -p android testMockDebugUnitTest --stacktrace --console=plain 2>&1 | tee mock-unit-tests.log
+
+      - name: Report Gradle task diagnostics on failure
+        if: failure()
+        shell: bash
+        run: |
+          task_summary="$(grep -E 'Task :app/|Task :app:|BUILD SUCCESSFUL|BUILD FAILED|FAILED' assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 20 | tr '\n' ';' || true)"
+          error_summary="$(grep -iE '(^e: |error:|what went wrong|execution failed|could not resolve|requires|minimum|aar metadata|compilesdk|caused by)' assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 20 | tr '\n' ';' | cut -c1-3500 || true)"
+          echo "::error title=Gradle task diagnostics::Tasks: ${task_summary:-no task log}; details: ${error_summary:-no matching error details}"
 
       - name: Locate and stage generated mock APK
         run: |
