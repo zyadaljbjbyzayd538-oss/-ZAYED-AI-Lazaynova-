@@ -102,7 +102,7 @@ flowchart LR
 ## 6. ما الذي يلزم حتى نقول إن المشروع كامل؟
 
 ### أ. إغلاق مانع Android
-- تجهيز JDK 17 وGradle 9.4.1 وAndroid Gradle Plugin 9.2.0 وAndroid SDK Platform 37.
+- تجهيز JDK 17 وGradle 9.4.1 وAndroid Gradle Plugin 9.2.0 وAndroid SDK Platform 36.
 - تشغيل `gradle -p android :app:assembleDebug`, `:app:testDebugUnitTest`, و`:app:lint`، إصلاح أي أخطاء، وإضافة اختبارات API/parser/session.
 - تجربة دخول حقيقي، انتهاء الجلسة، storage encryption، قطع الشبكة/إلغاء التدفق، RTL، تدوير الشاشة، خلفية التطبيق، وشهادات TLS على emulator وجهاز.
 - إعداد signing/release، سياسة الخصوصية، معالجة الأعطال، accessibility للتطبيق نفسه، وفحص APK قبل التوزيع.
