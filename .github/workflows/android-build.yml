@@ -74,7 +74,9 @@ jobs:
           echo "::notice title=APK candidates::${apk_candidates:-none}"
           apk_path="$(printf '%s\n' "$apk_candidates" | grep -E '/mock/|mock.*debug' | head -n 1 || true)"
           if [[ -z "$apk_path" ]]; then
-            echo "No APK output for the mock debug variant was found under android/app/build."
+            task_summary="$(grep -E 'Task :app/|Task :app:|BUILD SUCCESSFUL|BUILD FAILED|APK' assemble-mock.log | tail -n 30 | tr '\n' ';' || true)"
+            build_dirs="$(find android/app/build -maxdepth 5 -type d -print 2>/dev/null | paste -sd ',' - | cut -c1-3000)"
+            echo "::error title=No mock APK output::No APK candidates. Gradle summary: ${task_summary:-none}; build directories: ${build_dirs:-none}"
             exit 1
           fi
           mkdir -p artifacts/android
