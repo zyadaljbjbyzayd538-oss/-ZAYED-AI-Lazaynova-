@@ -104,7 +104,8 @@ class CapabilityModelsTest {
         assertEquals("https://mock.lazaynova.invalid", session.baseUrl)
         assertEquals(200, capabilities.capability("WEB_RESEARCH")?.toolGrants?.first()?.usage?.usedToday ?: -1)
         assertEquals("12", usage.requestCount)
-        assertTrue((events.first() as LazaynovaApi.ChatStreamEvent.TextDelta).content.startsWith("[محاكاة محلية]"))
+        val streamedText = events.filterIsInstance<LazaynovaApi.ChatStreamEvent.TextDelta>().joinToString("") { it.content }
+        assertTrue(streamedText.startsWith("[محاكاة محلية]"))
         assertEquals("mock", (events.last() as LazaynovaApi.ChatStreamEvent.Completed).provenance.provider)
     }
 

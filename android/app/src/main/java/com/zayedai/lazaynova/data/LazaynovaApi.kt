@@ -208,7 +208,7 @@ class LazaynovaApi {
         val call = client.newCall(request)
         val producer = this
         call.enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: okhttp3.Call, error: IOException) {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
                 producer.close(ApiException("تعذّر الاتصال بخادم Lazaynova."))
             }
 
