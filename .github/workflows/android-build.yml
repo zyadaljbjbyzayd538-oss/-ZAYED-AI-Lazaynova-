@@ -76,8 +76,8 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          task_summary="$(grep -E 'Task :app/|Task :app:|BUILD SUCCESSFUL|BUILD FAILED|FAILED' assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 20 | tr '\n' ';' || true)"
-          error_summary="$(grep -iE '(^e: |error:|what went wrong|execution failed|could not resolve|requires|minimum|aar metadata|compilesdk|caused by)' assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 20 | tr '\n' ';' | cut -c1-3500 || true)"
+          task_summary="$(grep -E 'Task :app/|Task :app:|BUILD SUCCESSFUL|BUILD FAILED|FAILED' ktlint-check.log detekt.log assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 20 | tr '\n' ';' || true)"
+          error_summary="$(grep -iE '(\.kt:[0-9]+:[0-9]+|^e: |error:|rule.*violated|issues found|what went wrong|execution failed|could not resolve|requires|minimum|aar metadata|compilesdk|caused by)' ktlint-check.log detekt.log assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 30 | tr '\n' ';' | cut -c1-3500 || true)"
           echo "::error title=Gradle task diagnostics::Tasks: ${task_summary:-no task log}; details: ${error_summary:-no matching error details}"
 
       - name: Locate and stage generated mock APK
