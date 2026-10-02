@@ -12,6 +12,7 @@ indent_size = 4
 ktlint_code_style = intellij_idea
 ktlint_standard_max-line-length = disabled
 ktlint_standard_import-ordering = disabled
+ktlint_function_naming_ignore_when_annotated_with = Composable
 
 [*.kts]
 indent_size = 4

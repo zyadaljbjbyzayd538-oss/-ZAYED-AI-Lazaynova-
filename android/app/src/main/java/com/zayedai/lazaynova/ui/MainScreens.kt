@@ -1065,8 +1065,11 @@ private fun TaskActionTile(
         },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (result.availability == FeatureAvailability.AVAILABLE) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
-            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            containerColor = if (result.availability == FeatureAvailability.AVAILABLE) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            },
         ),
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
