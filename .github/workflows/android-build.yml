@@ -57,10 +57,21 @@ jobs:
         run: gradle -p android wrapper --gradle-version 9.4.1 --distribution-type bin
 
       - name: Check Kotlin style
-        run: ./android/gradlew -p android :app:ktlintCheck --stacktrace
+        run: ./android/gradlew -p android :app:ktlintCheck --stacktrace --console=plain 2>&1 | tee ktlint-check.log
 
       - name: Run Detekt
-        run: ./android/gradlew -p android :app:detekt --stacktrace
+        run: ./android/gradlew -p android :app:detekt --stacktrace --console=plain 2>&1 | tee detekt.log
+
+      - name: Upload Android analysis logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-analysis-logs-${{ github.run_id }}
+          path: |
+            ktlint-check.log
+            detekt.log
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Assemble mock debug APK
         run: ./android/gradlew -p android :app:assembleMockDebug
