@@ -56,8 +56,11 @@ jobs:
       - name: Generate project Gradle wrapper for this CI run
         run: gradle -p android wrapper --gradle-version 9.4.1 --distribution-type bin
 
-      - name: Check Kotlin style and static analysis
-        run: ./android/gradlew -p android :app:ktlintCheck :app:detekt
+      - name: Check Kotlin style
+        run: ./android/gradlew -p android :app:ktlintCheck --stacktrace
+
+      - name: Run Detekt
+        run: ./android/gradlew -p android :app:detekt --stacktrace
 
       - name: Assemble mock debug APK
         run: ./android/gradlew -p android :app:assembleMockDebug
