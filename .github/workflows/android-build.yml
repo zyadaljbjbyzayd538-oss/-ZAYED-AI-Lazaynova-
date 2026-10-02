@@ -76,9 +76,23 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          task_summary="$(grep -E 'Task :app/|Task :app:|BUILD SUCCESSFUL|BUILD FAILED|FAILED' ktlint-check.log detekt.log assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 20 | tr '\n' ';' || true)"
-          error_summary="$(grep -iE '(\.kt:[0-9]+:[0-9]+|^e: |error:|rule.*violated|issues found|what went wrong|execution failed|could not resolve|requires|minimum|aar metadata|compilesdk|caused by)' ktlint-check.log detekt.log assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 30 | tr '\n' ';' | cut -c1-3500 || true)"
+          task_summary="$(grep -E 'Task .*FAILED|BUILD FAILED' ktlint-check.log detekt.log assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 10 | tr '\n' ';' || true)"
+          error_summary="$(grep -iE '(\.kt:[0-9]+:[0-9]+|^e: |error:|rule.*violated|issues found|what went wrong|execution failed|could not resolve|requires|minimum|aar metadata|compilesdk|caused by)' ktlint-check.log detekt.log assemble-mock.log mock-unit-tests.log 2>/dev/null | tail -n 80 | tr '\n' ';' | cut -c1-12000 || true)"
           echo "::error title=Gradle task diagnostics::Tasks: ${task_summary:-no task log}; details: ${error_summary:-no matching error details}"
+
+      - name: Capture KtLint formatting patch for review
+        if: failure()
+        shell: bash
+        run: |
+          ./android/gradlew -p android :app:ktlintFormat --stacktrace --console=plain
+          git diff -- android/app/src/main/java/com/zayedai/lazaynova/ui/MainScreens.kt > ktlint-format.patch
+          gzip -c ktlint-format.patch > ktlint-format.patch.gz
+          patch_b64="$(base64 -w0 ktlint-format.patch.gz)"
+          if [[ -n "$patch_b64" && ${#patch_b64} -lt 50000 ]]; then
+            echo "::notice title=ktlint-patch-gzip-base64::$patch_b64"
+          else
+            echo "::warning title=ktlint-patch::Patch is empty or too large for annotation; see diagnostics artifact."
+          fi
 
       - name: Locate and stage generated mock APK
         run: |
@@ -112,5 +126,6 @@ jobs:
             detekt.log
             assemble-mock.log
             mock-unit-tests.log
+            ktlint-format.patch.gz
           if-no-files-found: ignore
           retention-days: 3
