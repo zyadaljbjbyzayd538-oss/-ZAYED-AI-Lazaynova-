@@ -87,11 +87,19 @@ jobs:
           ./android/gradlew -p android :app:ktlintFormat --stacktrace --console=plain
           git diff -- android/app/src/main/java/com/zayedai/lazaynova/ui/MainScreens.kt > ktlint-format.patch
           gzip -c ktlint-format.patch > ktlint-format.patch.gz
-          patch_b64="$(base64 -w0 ktlint-format.patch.gz)"
-          if [[ -n "$patch_b64" && ${#patch_b64} -lt 50000 ]]; then
-            echo "::notice title=ktlint-patch-gzip-base64::$patch_b64"
+          base64 -w0 ktlint-format.patch.gz > ktlint-format.patch.gz.b64
+          split --bytes=2800 --numeric-suffixes=0 --suffix-length=3 \
+            ktlint-format.patch.gz.b64 ktlint-format-chunk-
+          shopt -s nullglob
+          chunks=(ktlint-format-chunk-*)
+          if ((${#chunks[@]} == 0)); then
+            echo "::warning title=ktlint-patch::No formatting patch was generated."
           else
-            echo "::warning title=ktlint-patch::Patch is empty or too large for annotation; see diagnostics artifact."
+            for chunk_file in "${chunks[@]}"; do
+              chunk_index="${chunk_file##*-}"
+              chunk="$(cat "$chunk_file")"
+              echo "::notice title=ktlint-patch-chunk-${chunk_index}::$chunk"
+            done
           fi
 
       - name: Locate and stage generated mock APK
