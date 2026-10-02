@@ -70,8 +70,37 @@ jobs:
         run: ./android/gradlew -p android :app:assembleMockDebug :app:packageMockDebug --stacktrace --console=plain 2>&1 | tee assemble-mock.log
 
       - name: Run mock-flavor unit tests
+        id: mock_tests
         shell: bash
         run: ./android/gradlew -p android testMockDebugUnitTest --stacktrace --console=plain 2>&1 | tee mock-unit-tests.log
+
+      - name: Report mock unit test failures
+        if: failure() && steps.mock_tests.outcome == 'failure'
+        shell: bash
+        run: |
+          python3 - <<'PYTHON' > mock-tests-summary.txt
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          reports = list(Path("android/app/build/test-results/testMockDebugUnitTest").glob("TEST-*.xml"))
+          failures = []
+          for report in reports:
+              root = ET.parse(report).getroot()
+              for case in root.iter("testcase"):
+                  result = case.find("failure")
+                  if result is None:
+                      result = case.find("error")
+                  if result is not None:
+                      detail = " ".join((result.get("message", "") + " " + (result.text or "")).split())
+                      failures.append(f"{case.get('classname', '')}.{case.get('name', '')}: {detail[:1200]}")
+
+          if failures:
+              print("\n".join(failures))
+          else:
+              print("JUnit XML did not contain failure details.")
+          PYTHON
+          failure_summary="$(tr '\n' ';' < mock-tests-summary.txt | cut -c1-3500)"
+          echo "::error title=Mock debug unit test failures::${failure_summary}"
 
       - name: Report Gradle task diagnostics on failure
         if: failure()
@@ -135,6 +164,7 @@ jobs:
             detekt.log
             assemble-mock.log
             mock-unit-tests.log
+            mock-tests-summary.txt
             ktlint-format.patch.gz
           if-no-files-found: ignore
           retention-days: 3
