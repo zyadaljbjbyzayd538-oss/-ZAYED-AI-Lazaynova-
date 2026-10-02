@@ -1,3 +1,11 @@
+# Node.js backend
+node_modules/
+backend/dist/
+.env
+backend/.env
+infrastructure/private.env
+infrastructure/.env.private
+
 # Gradle files
 .gradle/
 build/
